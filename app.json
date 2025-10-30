@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Destinados",
+    "slug": "destinados",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "updates": {
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.destinados.app"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
+
+
