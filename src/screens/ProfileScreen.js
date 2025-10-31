@@ -35,6 +35,8 @@ export default function ProfileScreen({ navigation }) {
   const [error, setError] = useState("");
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [about, setAbout] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const logout = async () => {
     try { await signOut(auth); } catch {}
@@ -82,6 +84,7 @@ export default function ProfileScreen({ navigation }) {
           setPref(d.pref || "Ambos");
           setInterests(Array.isArray(d.interests) ? d.interests : []);
           setPhotos(Array.isArray(d.photos) ? d.photos : []);
+          setAbout(d.about || "");
         }
       } catch {}
       if (mounted) setLoading(false);
@@ -106,7 +109,7 @@ export default function ProfileScreen({ navigation }) {
     setError("");
     setSaving(true);
     const ref = doc(db, "users", user.uid);
-    const payload = { firstName: firstName.trim(), lastName: lastName.trim(), birth, pref, interests, photos };
+    const payload = { firstName: firstName.trim(), lastName: lastName.trim(), birth, pref, interests, photos, about: about.trim() };
     try {
       // Grava sempre com merge para simplificar
       const isComplete = Array.isArray(photos) && photos.length > 0;
@@ -119,6 +122,21 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const uploadToCloudinary = async (uri) => {
+    const CLOUD_NAME = "dh2pzblqm";
+    const UPLOAD_PRESET = "destinados_unsigned";
+    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+  
+    const data = new FormData();
+    data.append("file", { uri, type: "image/jpeg", name: "photo.jpg" });
+    data.append("upload_preset", UPLOAD_PRESET);
+  
+    const res = await fetch(endpoint, { method: "POST", body: data });
+    const json = await res.json();
+    if (!json.secure_url) throw new Error("Falha no upload da imagem");
+    return json.secure_url;
+  };
+
   const addPhoto = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -127,8 +145,15 @@ export default function ProfileScreen({ navigation }) {
       quality: 0.8
     });
     if (!res.canceled) {
-      const uri = res.assets[0].uri;
-      setPhotos((prev) => [...prev, uri]);
+      try {
+        setUploading(true);
+        const uploaded = await uploadToCloudinary(res.assets[0].uri);
+        setPhotos((prev) => [...prev, uploaded]);
+      } catch (e) {
+        setError("Não foi possível enviar a foto. Verifique suas credenciais do Cloudinary.");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -139,13 +164,34 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={{ flex: 1, padding: 24 }}>
       <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 12 }}>Seu Perfil</Text>
-      {user?.uid ? (
-        <Text selectable style={{ color: "#666", marginBottom: 12 }}>UID: {user.uid}</Text>
-      ) : null}
       {loading ? (
         <Text>Carregando…</Text>
       ) : (
         <ScrollView>
+          <Text style={{ fontWeight: "600", marginBottom: 8 }}>Fotos do perfil</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ alignItems: "center" }}>
+            {photos.map((p, idx) => (
+              <View key={`${p}-${idx}`} style={{ width: 120, height: 120, marginRight: 12, borderRadius: 10, overflow: "hidden", backgroundColor: "#eee", position: "relative" }}>
+                <Image source={{ uri: p }} style={{ width: "100%", height: "100%" }} />
+                <TouchableOpacity onPress={() => removePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.5)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12 }}>
+                  <Text style={{ color: "#fff" }}>Remover</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity onPress={addPhoto} style={{ width: 120, height: 120, marginRight: 12, borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#777" }}>+ Adicionar</Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          <Text style={{ fontWeight: "600", marginBottom: 8 }}>Sobre mim</Text>
+          <TextInput
+            placeholder="Fale um pouco sobre você..."
+            value={about}
+            onChangeText={setAbout}
+            multiline
+            numberOfLines={4}
+            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, textAlignVertical: 'top', minHeight: 96 }}
+          />
           <TextInput
             placeholder="Primeiro nome"
             value={firstName}
@@ -184,20 +230,9 @@ export default function ProfileScreen({ navigation }) {
             ))}
           </View>
 
-          <Text style={{ fontWeight: "600", marginBottom: 8 }}>Fotos do perfil</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 12 }}>
-            {photos.map((p, idx) => (
-              <View key={`${p}-${idx}`} style={{ width: "31%", aspectRatio: 1, marginRight: "3.5%", marginBottom: 12, borderRadius: 10, overflow: "hidden", backgroundColor: "#eee", position: "relative" }}>
-                <Image source={{ uri: p }} style={{ width: "100%", height: "100%" }} />
-                <TouchableOpacity onPress={() => removePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.5)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12 }}>
-                  <Text style={{ color: "#fff" }}>Remover</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity onPress={addPhoto} style={{ width: "31%", aspectRatio: 1, marginRight: "3.5%", marginBottom: 12, borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: "#777" }}>+ Adicionar</Text>
-            </TouchableOpacity>
-          </View>
+          
+
+          
 
           {error ? <Text style={{ color: "#D00", marginBottom: 8 }}>{error}</Text> : null}
           {saving ? <Text style={{ color: "#666", marginBottom: 8 }}>Salvando...</Text> : null}

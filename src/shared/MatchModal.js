@@ -1,7 +1,7 @@
 import React from "react";
 import { Modal, View, Text, Image, TouchableOpacity, Pressable } from "react-native";
 
-export default function MatchModal({ visible, onClose, me, other }) {
+export default function MatchModal({ visible, onClose, me, other, onStartChat }) {
   if (!visible) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -13,7 +13,7 @@ export default function MatchModal({ visible, onClose, me, other }) {
             <Image source={{ uri: other?.photo }} style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#eee" }} />
           </View>
           <Text style={{ marginBottom: 14 }}>{`Você e ${other?.name} se gostaram!`}</Text>
-          <TouchableOpacity onPress={onClose} style={{ backgroundColor: "#FF4D67", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10 }}>
+          <TouchableOpacity onPress={onStartChat || onClose} style={{ backgroundColor: "#FF4D67", paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10 }}>
             <Text style={{ color: "#fff", fontWeight: "600" }}>Começar a conversar</Text>
           </TouchableOpacity>
         </Pressable>
