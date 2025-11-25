@@ -5,6 +5,7 @@ import ProfilePreviewModal from "../shared/ProfilePreviewModal";
 import { fetchDiscoverUsers, sendSwipe, getOrCreateChat } from "../services/data";
 import { auth, db } from "../services/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { registerForPushNotifications } from "../services/notifications";
 
 export default function HomeScreen({ navigation }) {
   const [profiles, setProfiles] = useState([]);
@@ -16,11 +17,16 @@ export default function HomeScreen({ navigation }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [cardWidth, setCardWidth] = useState(Dimensions.get('window').width);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [imageErrors, setImageErrors] = useState(new Set());
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
+      
+      // Registra para notificações push
+      await registerForPushNotifications();
+      
       const list = await fetchDiscoverUsers(25, true); // incluir já vistos para facilitar testes
       // carrega meu perfil para exibir minha foto no modal de match
       const me = auth.currentUser;
@@ -67,6 +73,7 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     setPhotoIndex(0);
+    setImageErrors(new Set()); // Limpa erros quando muda de perfil
   }, [profile?.id]);
 
   const onLike = async () => {
@@ -105,8 +112,21 @@ export default function HomeScreen({ navigation }) {
       ) : profile ? (
         <View style={{ flex: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "#eee" }} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
           {photoUris.length <= 1 ? (
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setPreviewOpen(true)}>
-              <Image source={{ uri: photoUris[0] }} style={{ width: cardWidth, height: '100%' }} resizeMode='cover' />
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setPreviewOpen(true)} style={{ width: cardWidth, height: '100%' }}>
+              {imageErrors.has(photoUris[0]) ? (
+                <View style={{ width: '100%', height: '100%', backgroundColor: '#ddd', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#999', fontSize: 16 }}>Imagem não disponível</Text>
+                </View>
+              ) : (
+                <Image 
+                  source={{ uri: photoUris[0] }} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode='cover'
+                  onError={() => {
+                    setImageErrors(prev => new Set([...prev, photoUris[0]]));
+                  }}
+                />
+              )}
             </TouchableOpacity>
           ) : (
             <FlatList
@@ -125,8 +145,21 @@ export default function HomeScreen({ navigation }) {
                 setPhotoIndex(idx);
               }}
               renderItem={({ item }) => (
-                <TouchableOpacity activeOpacity={0.9} onPress={() => setPreviewOpen(true)}>
-                  <Image source={{ uri: item }} style={{ width: cardWidth, height: '100%' }} resizeMode='cover' />
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setPreviewOpen(true)} style={{ width: cardWidth, height: '100%' }}>
+                  {imageErrors.has(item) ? (
+                    <View style={{ width: '100%', height: '100%', backgroundColor: '#ddd', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: '#999', fontSize: 16 }}>Imagem não disponível</Text>
+                    </View>
+                  ) : (
+                    <Image 
+                      source={{ uri: item }} 
+                      style={{ width: '100%', height: '100%' }} 
+                      resizeMode='cover'
+                      onError={() => {
+                        setImageErrors(prev => new Set([...prev, item]));
+                      }}
+                    />
+                  )}
                 </TouchableOpacity>
               )}
             />
@@ -145,7 +178,9 @@ export default function HomeScreen({ navigation }) {
             <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700", marginBottom: 4 }}>
               {(() => {
                 const age = getAgeFromBirth(profile.birth);
-                return age != null ? `${profile.firstName || "Usuário"}, ${age}` : (profile.firstName || "Usuário");
+                const nameAge = age != null ? `${profile.firstName || "Usuário"}, ${age}` : (profile.firstName || "Usuário");
+                const distance = profile.distance != null ? ` • ${Math.round(profile.distance)}km` : '';
+                return nameAge + distance;
               })()}
             </Text>
             {profile.about ? (

@@ -1,1 +1,10 @@
 node_modules
+config/firebaseConfig.json
+config/cloudinaryConfig.json
+.expo/
+dist/
+*.log
+expo-debug.log
+expo-error.log
+android/
+ios/

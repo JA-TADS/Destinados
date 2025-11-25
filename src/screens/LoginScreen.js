@@ -34,14 +34,16 @@ export default function LoginScreen({ navigation }) {
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+        placeholderTextColor="#999"
       />
       <TextInput
         placeholder="Senha"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 8 }}
+        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 8, color: "#000" }}
+        placeholderTextColor="#999"
       />
       {error ? <Text style={{ color: "#D00", marginBottom: 8 }}>{error}</Text> : null}
       <TouchableOpacity onPress={onLogin} style={{ backgroundColor: "#FF4D67", padding: 14, borderRadius: 12, alignItems: "center", marginTop: 8 }}>

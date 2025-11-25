@@ -12,6 +12,7 @@ export default function ProfileDetailsScreen({ navigation }) {
   const [pref, setPref] = useState("Ambos");
   const [prefOpen, setPrefOpen] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -47,13 +48,38 @@ export default function ProfileDetailsScreen({ navigation }) {
     return firstName.trim().length > 0 && lastName.trim().length > 0 && isBirthValid();
   };
 
-  const onContinue = () => {
+
+  const onContinue = async () => {
     if (!isFormValid()) {
       setError("Preencha primeiro e último nome e informe uma data válida (dd/mm/aaaa).");
       return;
     }
     setError("");
-    navigation.navigate("Interests", { profile: { photo, firstName, lastName, birth, pref, profileComplete: true } });
+    setUploading(true);
+    
+    try {
+      // Se há uma foto e ela é uma URI local (não é uma URL do Cloudinary), faz upload
+      let photoUrl = photo;
+      if (photo && (photo.startsWith('file://') || photo.startsWith('content://') || photo.startsWith('/'))) {
+        photoUrl = await uploadToCloudinary(photo);
+      }
+      
+      navigation.navigate("Interests", { 
+        profile: { 
+          photo: photoUrl, 
+          firstName, 
+          lastName, 
+          birth, 
+          pref, 
+          profileComplete: true 
+        } 
+      });
+    } catch (e) {
+      setError("Não foi possível enviar a foto. Tente novamente.");
+      console.error('Erro ao fazer upload da foto:', e);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -63,20 +89,22 @@ export default function ProfileDetailsScreen({ navigation }) {
         {photo ? (
           <Image source={{ uri: photo }} style={{ width: 120, height: 120 }} />
         ) : (
-          <Text>Adicionar Foto</Text>
+          <Text style={{ textAlign: "center", color: "#666" }}>Adicionarr</Text>
         )}
       </TouchableOpacity>
       <TextInput
         placeholder="Primeiro nome"
         value={firstName}
         onChangeText={setFirstName}
-        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+        placeholderTextColor="#999"
       />
       <TextInput
         placeholder="Último nome"
         value={lastName}
         onChangeText={setLastName}
-        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+        placeholderTextColor="#999"
       />
       <TextInput
         placeholder="Data de nascimento (dd/mm/aaaa)"
@@ -84,7 +112,8 @@ export default function ProfileDetailsScreen({ navigation }) {
         value={birth}
         onChangeText={formatBirth}
         maxLength={10}
-        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+        style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+        placeholderTextColor="#999"
       />
       <Pressable onPress={() => setPrefOpen(true)} style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 16 }}>
         <Text style={{ color: pref ? "#111" : "#999" }}>{pref || "Preferência"}</Text>
@@ -108,10 +137,10 @@ export default function ProfileDetailsScreen({ navigation }) {
       {error ? <Text style={{ color: "#D00", marginBottom: 8 }}>{error}</Text> : null}
       <TouchableOpacity
         onPress={onContinue}
-        disabled={!isFormValid()}
-        style={{ backgroundColor: isFormValid() ? "#FF4D67" : "#FFB3C0", padding: 14, borderRadius: 12, alignItems: "center" }}
+        disabled={!isFormValid() || uploading}
+        style={{ backgroundColor: (isFormValid() && !uploading) ? "#FF4D67" : "#FFB3C0", padding: 14, borderRadius: 12, alignItems: "center" }}
       >
-        <Text style={{ color: "#fff", fontWeight: "600" }}>Continuar</Text>
+        <Text style={{ color: "#fff", fontWeight: "600" }}>{uploading ? "Enviando foto..." : "Continuar"}</Text>
       </TouchableOpacity>
     </View>
   );

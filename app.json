@@ -8,19 +8,54 @@
       "enabled": true,
       "fallbackToCacheTimeout": 0
     },
+    "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Precisamos da sua localização para mostrar perfis próximos a você.",
+        "NSLocationAlwaysUsageDescription": "Precisamos da sua localização para mostrar perfis próximos a você."
+      }
     },
     "android": {
-      "package": "com.destinados.app"
+      "package": "com.destinados.app",
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#FF4D67",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Destinados"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF4D67",
+          "mode": "production"
+        }
+      ]
+    ],
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ca75a761-625f-42c8-ae5a-18c0b4154e51"
+      }
     }
   }
 }
-
-

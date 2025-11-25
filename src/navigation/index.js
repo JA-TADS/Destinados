@@ -42,7 +42,12 @@ function MainTabs() {
 
 export default function RootNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        contentStyle: { backgroundColor: '#FFF5F7' },
+        headerStyle: { backgroundColor: '#FFF5F7' },
+      }}
+    >
       <Stack.Screen name="Intro" component={IntroScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Entrar" }} />
       <Stack.Screen name="Signup" component={SignupScreen} options={{ title: "Criar conta" }} />

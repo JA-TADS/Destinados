@@ -1,9 +1,16 @@
 import { auth, db } from "./firebase";
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, where, Timestamp, addDoc, limit } from "firebase/firestore";
+import { calculateDistance } from "./location";
+import { sendMatchNotification } from "./notifications";
 
-export async function fetchDiscoverUsers(limitCount = 20, includeSeen = false) {
+export async function fetchDiscoverUsers(limitCount = 20, includeSeen = false, maxDistanceKm = 50) {
   const me = auth.currentUser;
   if (!me) return [];
+
+  // Obtém minha localização
+  const myDoc = await getDoc(doc(db, "users", me.uid));
+  const myData = myDoc.exists() ? myDoc.data() : null;
+  const myLocation = myData?.location;
 
   // Carrega meus swipes para filtrar já vistos
   let already = new Set([me.uid]);
@@ -12,15 +19,34 @@ export async function fetchDiscoverUsers(limitCount = 20, includeSeen = false) {
     mySwipesSnap.forEach((d) => already.add(d.data().to));
   }
 
-  // Busca todos os usuários (simples) e filtra no cliente
+  // Busca todos os usuários e filtra no cliente
   const usersSnap = await getDocs(collection(db, "users"));
   const users = [];
   usersSnap.forEach((d) => {
     const data = d.data();
     if (!already.has(d.id) && data.profileComplete) {
-      users.push({ id: d.id, ...data });
+      const user = { id: d.id, ...data };
+      
+      // Filtra por distância se tiver localização
+      if (myLocation && data.location) {
+        const distance = calculateDistance(
+          myLocation.latitude,
+          myLocation.longitude,
+          data.location.latitude,
+          data.location.longitude
+        );
+        user.distance = distance;
+        if (distance > maxDistanceKm) return; // Pula se estiver muito longe
+      }
+      
+      users.push(user);
     }
   });
+
+  // Ordena por distância (mais próximos primeiro) se tiver localização
+  if (myLocation) {
+    users.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+  }
 
   return users.slice(0, limitCount);
 }
@@ -48,6 +74,18 @@ export async function sendSwipe(toUid, like) {
         users: [me.uid, toUid],
         createdAt: Timestamp.now()
       }, { merge: true });
+      
+      // Envia notificação push para o outro usuário
+      try {
+        const otherUserDoc = await getDoc(doc(db, "users", toUid));
+        if (otherUserDoc.exists()) {
+          const otherName = otherUserDoc.data().firstName || "Alguém";
+          await sendMatchNotification(toUid, otherName);
+        }
+      } catch (e) {
+        console.error('Erro ao enviar notificação:', e);
+      }
+      
       return { match: matchId };
     }
   }

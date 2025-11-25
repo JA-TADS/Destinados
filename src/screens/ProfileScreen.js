@@ -4,6 +4,8 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
+import { getCurrentLocation } from "../services/location";
+import { uploadToCloudinary } from "../services/cloudinary";
 
 const ALL_INTERESTS = [
   "Fotografias",
@@ -83,7 +85,9 @@ export default function ProfileScreen({ navigation }) {
           setBirth(d.birth || "");
           setPref(d.pref || "Ambos");
           setInterests(Array.isArray(d.interests) ? d.interests : []);
-          setPhotos(Array.isArray(d.photos) ? d.photos : []);
+          const loadedPhotos = Array.isArray(d.photos) ? d.photos : [];
+          console.log('Fotos carregadas do Firestore:', loadedPhotos);
+          setPhotos(loadedPhotos);
           setAbout(d.about || "");
         }
       } catch {}
@@ -109,7 +113,25 @@ export default function ProfileScreen({ navigation }) {
     setError("");
     setSaving(true);
     const ref = doc(db, "users", user.uid);
-    const payload = { firstName: firstName.trim(), lastName: lastName.trim(), birth, pref, interests, photos, about: about.trim() };
+    
+    // Obtém localização atual
+    const location = await getCurrentLocation();
+    const locationData = location ? {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      updatedAt: location.timestamp
+    } : null;
+    
+    const payload = { 
+      firstName: firstName.trim(), 
+      lastName: lastName.trim(), 
+      birth, 
+      pref, 
+      interests, 
+      photos, 
+      about: about.trim(),
+      ...(locationData && { location: locationData })
+    };
     try {
       // Grava sempre com merge para simplificar
       const isComplete = Array.isArray(photos) && photos.length > 0;
@@ -122,20 +144,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const uploadToCloudinary = async (uri) => {
-    const CLOUD_NAME = "dh2pzblqm";
-    const UPLOAD_PRESET = "destinados_unsigned";
-    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-  
-    const data = new FormData();
-    data.append("file", { uri, type: "image/jpeg", name: "photo.jpg" });
-    data.append("upload_preset", UPLOAD_PRESET);
-  
-    const res = await fetch(endpoint, { method: "POST", body: data });
-    const json = await res.json();
-    if (!json.secure_url) throw new Error("Falha no upload da imagem");
-    return json.secure_url;
-  };
 
   const addPhoto = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -148,8 +156,15 @@ export default function ProfileScreen({ navigation }) {
       try {
         setUploading(true);
         const uploaded = await uploadToCloudinary(res.assets[0].uri);
-        setPhotos((prev) => [...prev, uploaded]);
+        console.log('Foto enviada para Cloudinary:', uploaded);
+        setPhotos((prev) => {
+          const newPhotos = [...prev, uploaded];
+          console.log('Fotos atualizadas:', newPhotos);
+          return newPhotos;
+        });
+        setError(""); // Limpa erros anteriores
       } catch (e) {
+        console.error('Erro ao fazer upload:', e);
         setError("Não foi possível enviar a foto. Verifique suas credenciais do Cloudinary.");
       } finally {
         setUploading(false);
@@ -169,17 +184,26 @@ export default function ProfileScreen({ navigation }) {
       ) : (
         <ScrollView>
           <Text style={{ fontWeight: "600", marginBottom: 8 }}>Fotos do perfil</Text>
+          {uploading && <Text style={{ color: "#666", marginBottom: 8, fontSize: 12 }}>Enviando foto...</Text>}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ alignItems: "center" }}>
-            {photos.map((p, idx) => (
+            {photos.length > 0 && photos.map((p, idx) => (
               <View key={`${p}-${idx}`} style={{ width: 120, height: 120, marginRight: 12, borderRadius: 10, overflow: "hidden", backgroundColor: "#eee", position: "relative" }}>
-                <Image source={{ uri: p }} style={{ width: "100%", height: "100%" }} />
+                <Image 
+                  source={{ uri: p }} 
+                  style={{ width: "100%", height: "100%" }} 
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.log('Erro ao carregar foto:', p, error);
+                  }}
+                />
                 <TouchableOpacity onPress={() => removePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.5)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12 }}>
-                  <Text style={{ color: "#fff" }}>Remover</Text>
+                  <Text style={{ color: "#fff", fontSize: 12 }}>Remover</Text>
                 </TouchableOpacity>
               </View>
             ))}
-            <TouchableOpacity onPress={addPhoto} style={{ width: 120, height: 120, marginRight: 12, borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: "#777" }}>+ Adicionar</Text>
+            <TouchableOpacity onPress={addPhoto} style={{ width: 120, height: 120, marginRight: 12, borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center", backgroundColor: "#f9f9f9" }}>
+              <Text style={{ color: "#777", fontSize: 24, lineHeight: 24 }}>+</Text>
+              <Text style={{ color: "#777", fontSize: 12, marginTop: 4 }}>Adicionar</Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -190,19 +214,22 @@ export default function ProfileScreen({ navigation }) {
             onChangeText={setAbout}
             multiline
             numberOfLines={4}
-            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, textAlignVertical: 'top', minHeight: 96 }}
+            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, textAlignVertical: 'top', minHeight: 96, color: "#000" }}
+            placeholderTextColor="#999"
           />
           <TextInput
             placeholder="Primeiro nome"
             value={firstName}
             onChangeText={setFirstName}
-            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+            placeholderTextColor="#999"
           />
           <TextInput
             placeholder="Último nome"
             value={lastName}
             onChangeText={setLastName}
-            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+            placeholderTextColor="#999"
           />
           <TextInput
             placeholder="Data de nascimento (dd/mm/aaaa)"
@@ -210,7 +237,8 @@ export default function ProfileScreen({ navigation }) {
             value={birth}
             onChangeText={formatBirth}
             maxLength={10}
-            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12 }}
+            style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
+            placeholderTextColor="#999"
           />
 
           <Pressable onPress={() => setPrefOpen(true)} style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 16 }}>

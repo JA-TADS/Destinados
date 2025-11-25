@@ -1,20 +1,55 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { initializeAuth, getAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBnCWJY4NobiYPHepokjn3Ba0JMGQmAn18",
-  authDomain: "destinados-7f2ff.firebaseapp.com",
-  projectId: "destinados-7f2ff",
-  storageBucket: "destinados-7f2ff.firebasestorage.app",
-  messagingSenderId: "565138365383",
-  appId: "1:565138365383:web:d036ad104866b6f84e17e2",
-  measurementId: "G-1H0CY7HQBG"
-};
+// Carrega configuração do arquivo ignorado pelo Git
+let firebaseConfig;
+try {
+  firebaseConfig = require("../../config/firebaseConfig.json");
+} catch (e) {
+  // Fallback: tenta variáveis de ambiente (se configuradas)
+  firebaseConfig = {
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
+  };
+}
 
-const app = initializeApp(firebaseConfig);
+// Inicializa o app apenas se ainda não foi inicializado
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-export const auth = getAuth(app);
+// Inicializa Auth para React Native/Expo
+// Para React Native, precisamos usar initializeAuth com getReactNativePersistence
+// Isso garante que o componente auth seja registrado corretamente
+let auth;
+
+// Sempre tenta initializeAuth com persistência (necessário para React Native)
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+} catch (error) {
+  // Se já foi inicializado, obtém a instância existente
+  if (error.code === 'auth/already-initialized') {
+    auth = getAuth(app);
+  } else {
+    // Para outros erros, tenta getAuth como fallback
+    try {
+      auth = getAuth(app);
+    } catch (getAuthError) {
+      // Se ambos falharem, relança o erro de inicialização
+      console.error('Erro ao inicializar Firebase Auth:', error);
+      throw error;
+    }
+  }
+}
+
+export { auth };
 export const db = getFirestore(app);
 
 
