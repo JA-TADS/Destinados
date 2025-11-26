@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, Pressable, Image } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, Pressable, Image, StyleSheet, Alert } from "react-native";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
 import { getCurrentLocation } from "../services/location";
 import { uploadToCloudinary } from "../services/cloudinary";
+import { testPushNotification } from "../services/notifications";
 
 const ALL_INTERESTS = [
   "Fotografias",
@@ -177,12 +178,21 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, padding: 24 }}>
+    <View style={styles.container}>
+      {/* Decorações de coração */}
+      <Text style={styles.heartDecoration1}>❤️</Text>
+      <Text style={styles.heartDecoration2}>💕</Text>
+      <Text style={styles.heartDecoration3}>💖</Text>
+      <Text style={styles.heartDecoration4}>💗</Text>
+      <Text style={styles.heartDecoration5}>💝</Text>
+      <Text style={styles.heartDecoration6}>💓</Text>
+      
+      <View style={styles.content}>
       <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 12 }}>Seu Perfil</Text>
       {loading ? (
         <Text>Carregando…</Text>
       ) : (
-        <ScrollView>
+        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
           <Text style={{ fontWeight: "600", marginBottom: 8 }}>Fotos do perfil</Text>
           {uploading && <Text style={{ color: "#666", marginBottom: 8, fontSize: 12 }}>Enviando foto...</Text>}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ alignItems: "center" }}>
@@ -264,6 +274,24 @@ export default function ProfileScreen({ navigation }) {
 
           {error ? <Text style={{ color: "#D00", marginBottom: 8 }}>{error}</Text> : null}
           {saving ? <Text style={{ color: "#666", marginBottom: 8 }}>Salvando...</Text> : null}
+          
+          <TouchableOpacity
+            onPress={async () => {
+              console.log('🟢🟢🟢 BOTÃO PRESSIONADO! 🟢🟢🟢');
+              Alert.alert('Teste', 'Botão pressionado! Verifique o console.');
+              try {
+                await testPushNotification();
+              } catch (err) {
+                console.error('❌ Erro ao chamar testPushNotification:', err);
+                Alert.alert('Erro', 'Erro ao testar notificação. Veja o console.');
+              }
+            }}
+            activeOpacity={0.7}
+            style={{ alignSelf: "center", marginTop: 12, marginBottom: 16, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, borderWidth: 2, borderColor: "#FF4D67", backgroundColor: "#fff", width: "100%" }}
+          >
+            <Text style={{ color: "#FF4D67", fontWeight: "600", textAlign: "center", fontSize: 16 }}>🧪 Testar Notificação Push</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={onSave} disabled={!isFormValid || saving} style={{ backgroundColor: (!isFormValid || saving) ? "#FFB3C0" : "#FF4D67", padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 16 }}>
             <Text style={{ color: "#fff", fontWeight: "600" }}>{saving ? "Salvando" : "Salvar"}</Text>
           </TouchableOpacity>
@@ -292,10 +320,83 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </Pressable>
       </Modal>
-
-      
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: "hidden",
+    backgroundColor: "#FFF5F7",
+  },
+  heartDecoration1: {
+    position: "absolute",
+    top: "15%",
+    left: "10%",
+    fontSize: 30,
+    opacity: 0.3,
+    transform: [{ rotate: "-15deg" }],
+    zIndex: 0,
+  },
+  heartDecoration2: {
+    position: "absolute",
+    top: "25%",
+    right: "15%",
+    fontSize: 25,
+    opacity: 0.25,
+    transform: [{ rotate: "20deg" }],
+    zIndex: 0,
+  },
+  heartDecoration3: {
+    position: "absolute",
+    bottom: "30%",
+    left: "8%",
+    fontSize: 28,
+    opacity: 0.3,
+    transform: [{ rotate: "10deg" }],
+    zIndex: 0,
+  },
+  heartDecoration4: {
+    position: "absolute",
+    bottom: "20%",
+    right: "12%",
+    fontSize: 32,
+    opacity: 0.25,
+    transform: [{ rotate: "-25deg" }],
+    zIndex: 0,
+  },
+  heartDecoration5: {
+    position: "absolute",
+    top: "50%",
+    left: "5%",
+    fontSize: 22,
+    opacity: 0.2,
+    transform: [{ rotate: "15deg" }],
+    zIndex: 0,
+  },
+  heartDecoration6: {
+    position: "absolute",
+    top: "70%",
+    right: "8%",
+    fontSize: 26,
+    opacity: 0.25,
+    transform: [{ rotate: "-10deg" }],
+    zIndex: 0,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    zIndex: 1,
+    backgroundColor: "transparent",
+  },
+});
 
 

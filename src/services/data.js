@@ -1,7 +1,7 @@
 import { auth, db } from "./firebase";
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, where, Timestamp, addDoc, limit } from "firebase/firestore";
 import { calculateDistance } from "./location";
-import { sendMatchNotification } from "./notifications";
+import { sendMatchNotification, sendMessageNotification } from "./notifications";
 
 export async function fetchDiscoverUsers(limitCount = 20, includeSeen = false, maxDistanceKm = 50) {
   const me = auth.currentUser;
@@ -75,15 +75,43 @@ export async function sendSwipe(toUid, like) {
         createdAt: Timestamp.now()
       }, { merge: true });
       
-      // Envia notificação push para o outro usuário
+      // Envia notificação push para ambos os usuários
       try {
+        // Busca dados de ambos os usuários
         const otherUserDoc = await getDoc(doc(db, "users", toUid));
-        if (otherUserDoc.exists()) {
+        const myUserDoc = await getDoc(doc(db, "users", me.uid));
+        
+        if (otherUserDoc.exists() && myUserDoc.exists()) {
           const otherName = otherUserDoc.data().firstName || "Alguém";
-          await sendMatchNotification(toUid, otherName);
+          const myName = myUserDoc.data().firstName || "Você";
+          
+          console.log('🎯 MATCH DETECTADO! Enviando notificações...');
+          console.log('👤 Outro usuário:', otherName, '- Token:', otherUserDoc.data().pushToken ? '✅ existe' : '❌ não existe');
+          console.log('👤 Meu usuário:', myName, '- Token:', myUserDoc.data().pushToken ? '✅ existe' : '❌ não existe');
+          
+          // Notificação para o outro usuário (com o nome do usuário atual)
+          if (otherUserDoc.data().pushToken) {
+            console.log('📤 Enviando notificação para o outro usuário...');
+            await sendMatchNotification(toUid, myName);
+          } else {
+            console.log('⚠️ Outro usuário não tem pushToken salvo - ele precisa abrir o app para receber notificações');
+          }
+          
+          // Notificação para o usuário atual (com o nome do outro usuário)
+          // Nota: Se o app estiver aberto, a notificação push pode não aparecer
+          // mas o modal de match já aparece na tela
+          if (myUserDoc.data().pushToken) {
+            console.log('📤 Enviando notificação para o usuário atual...');
+            await sendMatchNotification(me.uid, otherName);
+          } else {
+            console.log('⚠️ Usuário atual não tem pushToken salvo');
+          }
+        } else {
+          console.log('❌ Erro: Não foi possível encontrar os dados dos usuários');
         }
       } catch (e) {
-        console.error('Erro ao enviar notificação:', e);
+        console.error('❌ Erro ao enviar notificação:', e);
+        console.error('Detalhes:', e.message);
       }
       
       return { match: matchId };
@@ -147,12 +175,21 @@ export function listenMessages(chatId, callback) {
 export async function sendMessage(chatId, text) {
   const me = auth.currentUser;
   if (!me || !text) return;
+  
+  // Envia a mensagem
   await addDoc(collection(db, "chats", chatId, "messages"), {
     from: me.uid,
     text,
     createdAt: Timestamp.now()
   });
   await setDoc(doc(db, "chats", chatId), { updatedAt: Timestamp.now() }, { merge: true });
+  
+  // Envia notificação push para o destinatário
+  try {
+    await sendMessageNotification(chatId, me.uid, text);
+  } catch (error) {
+    console.error('Erro ao enviar notificação de mensagem:', error);
+  }
 }
 
 

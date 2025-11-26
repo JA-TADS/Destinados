@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image, Modal, Pressable } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { uploadToCloudinary } from "../services/cloudinary";
 
 const genders = ["Homem", "Mulher", "Ambos"];
 
@@ -115,6 +116,7 @@ export default function ProfileDetailsScreen({ navigation }) {
         style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 12, color: "#000" }}
         placeholderTextColor="#999"
       />
+      <Text style={{ fontWeight: "600", marginBottom: 8, color: "#1a1a1a" }}>Preferência:</Text>
       <Pressable onPress={() => setPrefOpen(true)} style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, marginBottom: 16 }}>
         <Text style={{ color: pref ? "#111" : "#999" }}>{pref || "Preferência"}</Text>
       </Pressable>
@@ -140,7 +142,7 @@ export default function ProfileDetailsScreen({ navigation }) {
         disabled={!isFormValid() || uploading}
         style={{ backgroundColor: (isFormValid() && !uploading) ? "#FF4D67" : "#FFB3C0", padding: 14, borderRadius: 12, alignItems: "center" }}
       >
-        <Text style={{ color: "#fff", fontWeight: "600" }}>{uploading ? "Enviando foto..." : "Continuar"}</Text>
+        <Text style={{ color: "#fff", fontWeight: "600" }}>{uploading ? "Criando perfil..." : "Continuar"}</Text>
       </TouchableOpacity>
     </View>
   );

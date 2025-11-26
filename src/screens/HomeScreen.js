@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions, FlatList } from "react-native";
+import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions, FlatList, StyleSheet } from "react-native";
 import MatchModal from "../shared/MatchModal";
 import ProfilePreviewModal from "../shared/ProfilePreviewModal";
 import { fetchDiscoverUsers, sendSwipe, getOrCreateChat } from "../services/data";
@@ -27,7 +27,7 @@ export default function HomeScreen({ navigation }) {
       // Registra para notificações push
       await registerForPushNotifications();
       
-      const list = await fetchDiscoverUsers(25, true); // incluir já vistos para facilitar testes
+      const list = await fetchDiscoverUsers(25, false); // não incluir perfis já interagidos
       // carrega meu perfil para exibir minha foto no modal de match
       const me = auth.currentUser;
       if (me) {
@@ -104,7 +104,16 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View style={styles.container}>
+      {/* Decorações de coração */}
+      <Text style={styles.heartDecoration1}>❤️</Text>
+      <Text style={styles.heartDecoration2}>💕</Text>
+      <Text style={styles.heartDecoration3}>💖</Text>
+      <Text style={styles.heartDecoration4}>💗</Text>
+      <Text style={styles.heartDecoration5}>💝</Text>
+      <Text style={styles.heartDecoration6}>💓</Text>
+      
+      <View style={styles.content}>
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <Text>Carregando perfis…</Text>
@@ -195,9 +204,9 @@ export default function HomeScreen({ navigation }) {
       )}
       <View style={{ flexDirection: "row", justifyContent: "space-evenly", marginTop: 16 }}>
         <TouchableOpacity onPress={onDislike} disabled={!profile || actionLoading} style={{ width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: (!profile || actionLoading) ? "#ddd" : "#eee" }}>
-          <Text style={{ fontSize: 22 }}>✖️</Text>
+          <Text style={{ fontSize: 22 }}>💔</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onLike} disabled={!profile || actionLoading} style={{ width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: (!profile || actionLoading) ? "#FFB3C0" : "#FF4D67" }}>
+        <TouchableOpacity onPress={onLike} disabled={!profile || actionLoading} style={{ width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: (!profile || actionLoading) ? "#FFB3C0" : "#FF6B7D" }}>
           <Text style={{ fontSize: 22, color: "#fff" }}>❤</Text>
         </TouchableOpacity>
       </View>
@@ -220,8 +229,83 @@ export default function HomeScreen({ navigation }) {
       />
 
       <ProfilePreviewModal visible={previewOpen && !!profile} onClose={() => setPreviewOpen(false)} profile={profile} />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: "hidden",
+    backgroundColor: "#FFF5F7",
+  },
+  heartDecoration1: {
+    position: "absolute",
+    top: "15%",
+    left: "10%",
+    fontSize: 30,
+    opacity: 0.3,
+    transform: [{ rotate: "-15deg" }],
+    zIndex: 0,
+  },
+  heartDecoration2: {
+    position: "absolute",
+    top: "25%",
+    right: "15%",
+    fontSize: 25,
+    opacity: 0.25,
+    transform: [{ rotate: "20deg" }],
+    zIndex: 0,
+  },
+  heartDecoration3: {
+    position: "absolute",
+    bottom: "30%",
+    left: "8%",
+    fontSize: 28,
+    opacity: 0.3,
+    transform: [{ rotate: "10deg" }],
+    zIndex: 0,
+  },
+  heartDecoration4: {
+    position: "absolute",
+    bottom: "20%",
+    right: "12%",
+    fontSize: 32,
+    opacity: 0.25,
+    transform: [{ rotate: "-25deg" }],
+    zIndex: 0,
+  },
+  heartDecoration5: {
+    position: "absolute",
+    top: "50%",
+    left: "5%",
+    fontSize: 22,
+    opacity: 0.2,
+    transform: [{ rotate: "15deg" }],
+    zIndex: 0,
+  },
+  heartDecoration6: {
+    position: "absolute",
+    top: "70%",
+    right: "8%",
+    fontSize: 26,
+    opacity: 0.25,
+    transform: [{ rotate: "-10deg" }],
+    zIndex: 0,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+    zIndex: 1,
+    backgroundColor: "transparent",
+  },
+});
 
 
