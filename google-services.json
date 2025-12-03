@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "565138365383",
+    "project_id": "destinados-7f2ff",
+    "storage_bucket": "destinados-7f2ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:565138365383:android:6342ca39e5d7d3e54e17e2",
+        "android_client_info": {
+          "package_name": "com.destinados.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiihRBpr6_srMvE6bvt9F2aDZB-JPFxZ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
