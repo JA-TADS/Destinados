@@ -29,13 +29,37 @@ export async function registerForPushNotifications() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
+      console.log('❌ Permissão de notificação negada. Status:', finalStatus);
       return null;
     }
+    
+    console.log('✅ Permissão de notificação concedida');
 
     // Obtém token
-    const token = (await Notifications.getExpoPushTokenAsync({
-      projectId: 'ca75a761-625f-42c8-ae5a-18c0b4154e51' // EAS projectId do app.json
-    })).data;
+    console.log('🔑 Tentando obter push token...');
+    let token;
+    try {
+      // Tenta obter token sem FCM primeiro (iOS funciona assim)
+      const tokenOptions = {
+        projectId: 'ca75a761-625f-42c8-ae5a-18c0b4154e51' // EAS projectId do app.json
+      };
+      
+      // No Android, pode precisar de FCM, mas vamos tentar sem primeiro
+      token = (await Notifications.getExpoPushTokenAsync(tokenOptions)).data;
+      console.log('✅ Token obtido com sucesso!');
+    } catch (tokenError) {
+      console.error('❌ Erro ao obter token:', tokenError);
+      console.error('Detalhes do erro:', tokenError.message);
+      
+      // Se for erro de FCM no Android, informa mas não quebra o app
+      if (tokenError.message?.includes('FirebaseApp') || tokenError.message?.includes('FCM')) {
+        console.log('⚠️ Android requer configuração de FCM para notificações push');
+        console.log('📖 Siga o guia: https://docs.expo.dev/push-notifications/fcm-credentials/');
+        console.log('💡 Ou configure via: eas credentials');
+        return null;
+      }
+      throw tokenError;
+    }
 
     // Salva token no Firestore
     await setDoc(doc(db, 'users', me.uid), { pushToken: token }, { merge: true });

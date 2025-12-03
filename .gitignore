@@ -1,6 +1,9 @@
 node_modules
 config/firebaseConfig.json
 config/cloudinaryConfig.json
+# google-services.json - temporariamente no git para EAS Build
+*-firebase-adminsdk-*.json
+*.zip
 .expo/
 dist/
 *.log
