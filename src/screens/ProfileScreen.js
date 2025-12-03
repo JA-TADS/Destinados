@@ -147,7 +147,7 @@ export default function ProfileScreen({ navigation }) {
 
   const addPhoto = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8

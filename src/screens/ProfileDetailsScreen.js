@@ -16,14 +16,31 @@ export default function ProfileDetailsScreen({ navigation }) {
   const [uploading, setUploading] = useState(false);
 
   const pickImage = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8
-    });
-    if (!res.canceled) {
-      setPhoto(res.assets[0].uri);
+    try {
+      // Solicita permissão de acesso à galeria
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permissão para acessar a galeria foi negada. Por favor, permita nas configurações.');
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8
+      });
+
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        setPhoto(res.assets[0].uri);
+        setError(''); // Limpa erros anteriores
+        console.log('Foto selecionada:', res.assets[0].uri);
+      } else {
+        console.log('Seleção de foto cancelada');
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar imagem:', error);
+      setError('Erro ao selecionar imagem. Tente novamente.');
     }
   };
 
@@ -62,12 +79,16 @@ export default function ProfileDetailsScreen({ navigation }) {
       // Se há uma foto e ela é uma URI local (não é uma URL do Cloudinary), faz upload
       let photoUrl = photo;
       if (photo && (photo.startsWith('file://') || photo.startsWith('content://') || photo.startsWith('/'))) {
+        console.log('📤 Fazendo upload da foto para Cloudinary...');
         photoUrl = await uploadToCloudinary(photo);
+        console.log('✅ Foto enviada com sucesso:', photoUrl);
+      } else if (photo) {
+        console.log('ℹ️ Foto já é uma URL, usando diretamente:', photo);
       }
       
       navigation.navigate("Interests", { 
         profile: { 
-          photo: photoUrl, 
+          photo: photoUrl || null, 
           firstName, 
           lastName, 
           birth, 
@@ -76,8 +97,9 @@ export default function ProfileDetailsScreen({ navigation }) {
         } 
       });
     } catch (e) {
-      setError("Não foi possível enviar a foto. Tente novamente.");
-      console.error('Erro ao fazer upload da foto:', e);
+      const errorMessage = e?.message || 'Erro desconhecido';
+      console.error('❌ Erro ao fazer upload da foto:', e);
+      setError(`Não foi possível enviar a foto: ${errorMessage}. Verifique suas credenciais do Cloudinary.`);
     } finally {
       setUploading(false);
     }
@@ -90,7 +112,7 @@ export default function ProfileDetailsScreen({ navigation }) {
         {photo ? (
           <Image source={{ uri: photo }} style={{ width: 120, height: 120 }} />
         ) : (
-          <Text style={{ textAlign: "center", color: "#666" }}>Adicionarr</Text>
+          <Text style={{ textAlign: "center", color: "#666" }}>Adicionar Foto</Text>
         )}
       </TouchableOpacity>
       <TextInput
