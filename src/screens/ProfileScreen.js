@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, Pressable, Image, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Modal, Pressable, Image, StyleSheet } from "react-native";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
 import { getCurrentLocation } from "../services/location";
 import { uploadToCloudinary } from "../services/cloudinary";
-import { testPushNotification } from "../services/notifications";
 
 const ALL_INTERESTS = [
   "Fotografias",
@@ -275,23 +274,6 @@ export default function ProfileScreen({ navigation }) {
           {error ? <Text style={{ color: "#D00", marginBottom: 8 }}>{error}</Text> : null}
           {saving ? <Text style={{ color: "#666", marginBottom: 8 }}>Salvando...</Text> : null}
           
-          <TouchableOpacity
-            onPress={async () => {
-              console.log('🟢🟢🟢 BOTÃO PRESSIONADO! 🟢🟢🟢');
-              Alert.alert('Teste', 'Botão pressionado! Verifique o console.');
-              try {
-                await testPushNotification();
-              } catch (err) {
-                console.error('❌ Erro ao chamar testPushNotification:', err);
-                Alert.alert('Erro', 'Erro ao testar notificação. Veja o console.');
-              }
-            }}
-            activeOpacity={0.7}
-            style={{ alignSelf: "center", marginTop: 12, marginBottom: 16, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, borderWidth: 2, borderColor: "#FF4D67", backgroundColor: "#fff", width: "100%" }}
-          >
-            <Text style={{ color: "#FF4D67", fontWeight: "600", textAlign: "center", fontSize: 16 }}>🧪 Testar Notificação Push</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity onPress={onSave} disabled={!isFormValid || saving} style={{ backgroundColor: (!isFormValid || saving) ? "#FFB3C0" : "#FF4D67", padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 16 }}>
             <Text style={{ color: "#fff", fontWeight: "600" }}>{saving ? "Salvando" : "Salvar"}</Text>
           </TouchableOpacity>
