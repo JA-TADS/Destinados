@@ -1,16 +1,37 @@
 import { auth, db } from "./firebase";
 import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, where, Timestamp, addDoc, limit } from "firebase/firestore";
-import { calculateDistance } from "./location";
+import { calculateDistance, getCurrentLocation, isLocationValid, getAndUpdateLocation } from "./location";
 import { sendMatchNotification, sendMessageNotification } from "./notifications";
 
 export async function fetchDiscoverUsers(limitCount = 20, includeSeen = false, maxDistanceKm = 50) {
   const me = auth.currentUser;
   if (!me) return [];
 
-  // Obtém minha localização
+  // Obtém minha localização salva
   const myDoc = await getDoc(doc(db, "users", me.uid));
   const myData = myDoc.exists() ? myDoc.data() : null;
-  const myLocation = myData?.location;
+  let myLocation = myData?.location;
+
+  // Se não tem localização ou está muito antiga (mais de 30 minutos), tenta atualizar
+  if (!myLocation || !isLocationValid(myLocation, 30)) {
+    console.log('🔄 [DISCOVER] Localização não encontrada ou muito antiga, tentando atualizar...');
+    const currentLocation = await getAndUpdateLocation(me.uid);
+    if (currentLocation) {
+      myLocation = {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        updatedAt: currentLocation.timestamp
+      };
+      console.log('✅ [DISCOVER] Localização atualizada, continuando busca de perfis...');
+    } else if (myLocation) {
+      // Se falhou ao atualizar mas tem localização antiga, usa ela mesmo
+      console.log('⚠️ [DISCOVER] Não foi possível atualizar localização, usando localização salva');
+    } else {
+      console.log('⚠️ [DISCOVER] Nenhuma localização disponível, buscando perfis sem filtro de distância');
+    }
+  } else {
+    console.log('✅ [DISCOVER] Localização válida encontrada, usando localização salva');
+  }
 
   // Carrega meus swipes para filtrar já vistos
   let already = new Set([me.uid]);

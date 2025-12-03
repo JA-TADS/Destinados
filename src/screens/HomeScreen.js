@@ -6,6 +6,7 @@ import { fetchDiscoverUsers, sendSwipe, getOrCreateChat } from "../services/data
 import { auth, db } from "../services/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { registerForPushNotifications } from "../services/notifications";
+import { getAndUpdateLocation } from "../services/location";
 
 export default function HomeScreen({ navigation }) {
   const [profiles, setProfiles] = useState([]);
@@ -27,9 +28,17 @@ export default function HomeScreen({ navigation }) {
       // Registra para notificações push
       await registerForPushNotifications();
       
+      // Atualiza localização automaticamente em background (não bloqueia a UI)
+      const me = auth.currentUser;
+      if (me) {
+        console.log('🔄 [HOME] Atualizando localização em background...');
+        getAndUpdateLocation(me.uid).catch(err => {
+          console.log('❌ [HOME] Erro ao atualizar localização em background:', err);
+        });
+      }
+      
       const list = await fetchDiscoverUsers(25, false); // não incluir perfis já interagidos
       // carrega meu perfil para exibir minha foto no modal de match
-      const me = auth.currentUser;
       if (me) {
         try {
           const snap = await getDoc(doc(db, "users", me.uid));
